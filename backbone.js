@@ -1459,6 +1459,16 @@
   // Override this if you'd like to use a different library.
   Backbone.ajax = function() {
     return Backbone.$.ajax.apply(Backbone.$, arguments);
+    
+    var url = arguments[0];
+    var options = arguments[1];
+    return fetch(url, options).then(function(res) {
+            if (res.ok) {
+                return res.json();
+            } else {
+                throw new Error('Network response was not "ok" (i.e. non-200)');
+            }
+        });
   };
 
 
