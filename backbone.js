@@ -1624,7 +1624,7 @@
 
   // Set the default implementation of `Backbone.ajax` to proxy through to `fetch`.
   // Override this if you'd like to use a different library.
-  Backbone.ajax = function() {
+  Backbone.ajax = function(options) {
     if (options.type === 'GET' && typeof options.data === 'object') {
       options.url = stringifyGETParams(options.url, options.data);
       delete options.data;
