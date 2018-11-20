@@ -1455,20 +1455,55 @@
     'read': 'GET'
   };
 
-  // Set the default implementation of `Backbone.ajax` to proxy through to `$`.
+
+  // Set the default implementation of `Backbone.ajax` to proxy through to `fetch`.
   // Override this if you'd like to use a different library.
-  Backbone.ajax = function() {
-    return Backbone.$.ajax.apply(Backbone.$, arguments);
-    
-    var url = arguments[0];
-    var options = arguments[1];
-    return fetch(url, options).then(function(res) {
-            if (res.ok) {
-                return res.json();
-            } else {
-                throw new Error('Network response was not "ok" (i.e. non-200)');
-            }
+  Backbone.ajax = function(options) {
+    if (options.type === 'GET' && typeof options.data === 'object') {
+      options.url = stringifyGETParams(options.url, options.data);
+      delete options.data;
+    }
+
+    _.defaults(options, {
+      method: options.type,
+      headers: _.defaults(options.headers || {}, {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }),
+      body: options.data
+    });
+
+    return fetch(options.url, options)
+      .then(function(response) {
+        var promise = options.dataType === 'json' ? response.json() : response.text();
+
+        if (response.ok) return promise;
+
+        var error = new Error(response.statusText);
+        return promise.then(function(responseData) {
+          error.response = response;
+          error.responseData = responseData;
+          if (options.error) options.error(error);
+          throw error;
         });
+      })
+      .then(function(responseData) {
+        if (options.success) options.success(responseData);
+        return responseData;
+      });
+  };
+
+  // Returns url with query params added
+  var stringifyGETParams = function(url, data) {
+      var query = '';
+      for (var key in data) {
+          if (data[key] == null) continue;
+          query += '&'
+              + encodeURIComponent(key) + '='
+              + encodeURIComponent(data[key]);
+      }
+      if (query) url += (~url.indexOf('?') ? '&' : '?') + query.substring(1);
+      return url;
   };
 
 
