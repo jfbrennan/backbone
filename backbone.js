@@ -656,12 +656,12 @@
 
       var method = this.isNew() ? 'create' : (options.patch ? 'patch' : 'update');
       if (method === 'patch' && !options.attrs) options.attrs = attrs;
-      var xhr = this.sync(method, this, options);
+      var promiseOrXHR = this.sync(method, this, options);
 
       // Restore attributes.
       this.attributes = attributes;
 
-      return xhr;
+      return promiseOrXHR;
     },
 
     // Destroy this model on the server if it was already persisted.
@@ -684,15 +684,15 @@
         if (!model.isNew()) model.trigger('sync', model, resp, options);
       };
 
-      var xhr = false;
+      var promiseOrXHR = false;
       if (this.isNew()) {
         _.defer(options.success);
       } else {
         wrapError(this, options);
-        xhr = this.sync('delete', this, options);
+        promiseOrXHR = this.sync('delete', this, options);
       }
       if (!wait) destroy();
-      return xhr;
+      return promiseOrXHR;
     },
 
     // Default URL for the model's representation on the server -- if you're
@@ -1587,11 +1587,6 @@
     if (options.emulateHTTP && (type === 'PUT' || type === 'DELETE' || type === 'PATCH')) {
       params.type = 'POST';
       if (options.emulateJSON) params.data._method = type;
-      var beforeSend = options.beforeSend;
-      options.beforeSend = function(xhr) {
-        xhr.setRequestHeader('X-HTTP-Method-Override', type);
-        if (beforeSend) return beforeSend.apply(this, arguments);
-      };
     }
 
     // Don't process data on a non-GET request.
@@ -1599,18 +1594,10 @@
       params.processData = false;
     }
 
-    // Pass along `textStatus` and `errorThrown` from jQuery.
-    var error = options.error;
-    options.error = function(xhr, textStatus, errorThrown) {
-      options.textStatus = textStatus;
-      options.errorThrown = errorThrown;
-      if (error) error.call(options.context, xhr, textStatus, errorThrown);
-    };
-
     // Make the request, allowing the user to override any Ajax options.
-    var xhr = options.xhr = Backbone.ajax(_.extend(params, options));
-    model.trigger('request', model, xhr, options);
-    return xhr;
+    var promise = Backbone.ajax(_.extend(params, options));
+    model.trigger('request', model, promise, options);
+    return promise;
   };
 
   // Map from CRUD to HTTP for our default `Backbone.sync` implementation.
